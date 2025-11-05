@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Disease Outbreak Predictor + Research Chatbot</title>
+<style>
+body { margin:0; font-family:Arial; display:flex; height:100vh; }
+#map-container { flex:1; border-right:2px solid #ddd; }
+#right-panel { width:40%; display:flex; flex-direction:column; justify-content:space-between; padding:15px; background:#f9f9f9; }
+#precautions-box, #chatbot-box { background:white; border:1px solid #ccc; border-radius:10px; padding:15px; box-shadow:0 2px 8px rgba(0,0,0,0.1); }
+#precautions-box { flex:1; margin-bottom:10px; overflow-y:auto; }
+#chatbot-box { height:40%; display:flex; flex-direction:column; }
+#chat-history { flex:1; overflow-y:auto; border:1px solid #ddd; padding:10px; margin-bottom:10px; }
+.user { text-align:right; color:#333; margin:4px 0; }
+.bot { text-align:left; color:#006; margin:4px 0; }
+form { margin-bottom:10px; }
+</style>
+</head>
+<body>
+
+<!-- LEFT MAP -->
+<div id="map-container">
+  {% if map_file %}
+    <iframe src="{{ url_for('static', filename=map_file.split('static/')[1]) }}" width="100%" height="100%" style="border:none;"></iframe>
+  {% else %}
+    <p style="padding:20px;">Submit a prediction to view map</p>
+  {% endif %}
+</div>
+
+<!-- RIGHT PANEL -->
+<div id="right-panel">
+  <form method="POST">
+    <label>Year:</label>
+    <input type="number" name="year" required min="2025" max="2030">
+    <label>Month:</label>
+    <input type="number" name="month" required min="1" max="12">
+    <label>Disease:</label>
+    <select name="disease" required>
+      {% for d in all_diseases %}
+        <option value="{{ d }}" {% if d==disease_name %}selected{% endif %}>{{ d }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit">Predict</button>
+  </form>
+
+  <div id="precautions-box">
+    <h2>Precautions</h2>
+    <ul>{% for p in precautions %}<li>{{ p }}</li>{% endfor %}</ul>
+  </div>
+
+  <div id="chatbot-box">
+    <h2>Research Chatbot</h2>
+    <div id="chat-history"></div>
+    <div style="display:flex;">
+      <input id="user-input" type="text" placeholder="Ask your question..." style="flex:1; padding:8px;">
+      <button onclick="sendMessage()">Send</button>
+    </div>
+  </div>
+</div>
+
+<script>
+async function sendMessage() {
+  const input = document.getElementById("user-input");
+  const history = document.getElementById("chat-history");
+  const msg = input.value.trim();
+  if (!msg) return;
+
+  history.innerHTML += `<div class="user"><b>You:</b> ${msg}</div>`;
+  input.value = "";
+  const res = await fetch("/chat", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({message: msg})
+  });
+  const data = await res.json();
+  history.innerHTML += `<div class="bot"><b>Bot:</b> ${data.reply}</div>`;
+  history.scrollTop = history.scrollHeight;
+}
+</script>
+
+</body>
+</html>
